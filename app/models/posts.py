@@ -9,7 +9,7 @@ from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db import Base
+from app.core.database import Base
 
 RequiredStr = Annotated[str, mapped_column(String, nullable=False)]
 

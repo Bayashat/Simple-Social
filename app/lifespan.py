@@ -3,8 +3,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.db import create_db_and_tables
-from app.images import async_imagekit
+from app.core.database import create_db_and_tables
+from app.core.imagekit import async_imagekit
 
 
 @asynccontextmanager

@@ -3,20 +3,29 @@ from typing import TYPE_CHECKING, cast
 
 from sqlalchemy import insert, inspect, text
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase
+
+from app.core.config import get_settings
 
 if TYPE_CHECKING:
     from sqlalchemy.schema import Table
-
-DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
 
 class Base(DeclarativeBase):
     """Declarative base for ORM models."""
 
 
-engine = create_async_engine(DATABASE_URL)
+def _engine() -> AsyncEngine:
+    return create_async_engine(get_settings().database_url)
+
+
+engine = _engine()
 async_session_maker = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
@@ -48,11 +57,9 @@ def _migrate_sqlite_post_guid_columns(connection: Connection) -> None:
     if user_row is None:
         return
     col_type = (user_row[2] or "").upper().replace(" ", "")
-    # Current model uses GUID / CHAR(36); legacy was CHAR(32) from ``Uuid``.
     if col_type != "CHAR(32)":
         return
 
-    # Import models so ``Post.__table__`` reflects GUID columns matching ``user``.
     from app.models.posts import Post
 
     rows = [dict(row) for row in connection.execute(text("SELECT * FROM posts")).mappings()]

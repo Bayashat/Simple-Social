@@ -10,6 +10,7 @@ dependencies = [
     "fastapi>=0.136.1",
     "fastapi-users[sqlalchemy]>=15.0.5",
     "imagekitio>=5.4.0",
+    "pydantic-settings>=2.14.0",
     "python-dotenv>=1.2.2",
     "streamlit>=1.57.0",
     "uvicorn[standard]>=0.46.0",
@@ -66,6 +67,10 @@ files = ["app", "main.py", "frontend/app.py"]
 init_forbid_extra = true
 init_typed = true
 warn_required_dynamic_aliases = true
+
+[[tool.mypy.overrides]]
+module = "app.core.config"
+disable_error_code = ["pydantic-alias"]
 
 [[tool.mypy.overrides]]
 module = [
