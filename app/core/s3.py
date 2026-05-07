@@ -2,8 +2,8 @@
 
 Objects created with PutObject are **private by default**. To open the returned HTTPS URL in a
 browser without signing in you must grant anonymous ``s3:GetObject`` — typically with a **bucket
-policy** (recommended) or optionally ``ACL=public-read`` on each object **only if** your bucket still
-allows ACLs (often disabled).
+policy** (recommended) or optionally ``ACL=public-read`` on each object **only if** your bucket
+still allows ACLs (often disabled).
 
 See AWS: https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteAccessPermissionsReqd.html
 """
@@ -11,25 +11,34 @@ See AWS: https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteAccessPerm
 from __future__ import annotations
 
 import asyncio
-import os
+from typing import Any
 from urllib.parse import quote
 
 import boto3
 from botocore.exceptions import ClientError
 
+from app.core.config import get_settings
 from app.models.posts import safe_upload_basename
 
-s3_bucket_name = os.environ.get("AWS_S3_BUCKET") or os.environ.get("S3_BUCKET")
-s3_region = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "us-east-1"
-_raw_prefix = (os.environ.get("S3_KEY_PREFIX") or "posts").strip().strip("/")
-s3_key_prefix = f"{_raw_prefix}/"
+
+def _s3_settings() -> tuple[str | None, str, str, str | None, str | None, str]:
+    s = get_settings()
+    raw_prefix = s.s3_key_prefix.strip().strip("/")
+    return (
+        s.aws_s3_bucket,
+        s.aws_region,
+        f"{raw_prefix}/",
+        s.aws_endpoint_url,
+        s.s3_public_base_url,
+        s.s3_object_acl,
+    )
 
 
-def _client() -> boto3.client:
-    kwargs: dict[str, str] = {"region_name": s3_region}
-    ep = os.environ.get("AWS_ENDPOINT_URL") or os.environ.get("S3_ENDPOINT_URL")
-    if ep:
-        kwargs["endpoint_url"] = ep
+def _client() -> Any:
+    _, region, _, endpoint_url, _, _ = _s3_settings()
+    kwargs: dict[str, Any] = {"region_name": region}
+    if endpoint_url:
+        kwargs["endpoint_url"] = endpoint_url
     return boto3.client("s3", **kwargs)
 
 
@@ -38,15 +47,16 @@ def _put_object_sync(
     body: bytes,
     content_type: str | None,
 ) -> None:
-    if not s3_bucket_name:
+    bucket, _, _, _, _, acl_raw = _s3_settings()
+    if not bucket:
         raise ValueError("Set AWS_S3_BUCKET or S3_BUCKET")
 
     client = _client()
-    extra: dict[str, object] = {"Bucket": s3_bucket_name, "Key": key, "Body": body}
+    extra: dict[str, object] = {"Bucket": bucket, "Key": key, "Body": body}
     if content_type:
         extra["ContentType"] = content_type
 
-    acl = (os.environ.get("S3_OBJECT_ACL") or "").strip()
+    acl = acl_raw.strip()
     if acl:
         extra["ACL"] = acl
 
@@ -58,16 +68,17 @@ def _delete_object_sync(bucket: str, key: str) -> None:
 
 
 def public_object_url(object_key: str) -> str:
+    bucket, region, _, _, base_raw, _ = _s3_settings()
     encoded = quote(object_key, safe="/")
-    base = (os.environ.get("S3_PUBLIC_BASE_URL") or "").strip().rstrip("/")
+    base = (base_raw or "").strip().rstrip("/")
     if base:
         return f"{base}/{encoded}"
 
-    bn = s3_bucket_name or ""
-    if s3_region == "us-east-1":
+    bucket_name = bucket or ""
+    if region == "us-east-1":
         host = "s3.amazonaws.com"
-        return f"https://{bn}.{host}/{encoded}"
-    return f"https://{bn}.s3.{s3_region}.amazonaws.com/{encoded}"
+        return f"https://{bucket_name}.{host}/{encoded}"
+    return f"https://{bucket_name}.s3.{region}.amazonaws.com/{encoded}"
 
 
 async def upload_bytes(
@@ -76,12 +87,10 @@ async def upload_bytes(
     body: bytes,
     content_type: str | None,
 ) -> tuple[str, str]:
-    """Upload to S3. Returns (object_key, public_https_url_as_configured).
-
-    Opening that URL anonymously requires IAM/bucket-side public read configuration.
-    """
+    """Upload to S3. Returns (object_key, public_https_url_as_configured)."""
+    _, _, key_prefix, _, _, _ = _s3_settings()
     name = safe_upload_basename(original_filename)
-    key = f"{s3_key_prefix}{name}"
+    key = f"{key_prefix}{name}"
 
     await asyncio.to_thread(_put_object_sync, key, body, content_type)
     return key, public_object_url(key)

@@ -1,5 +1,6 @@
+from app.api.deps import fastapi_users
+from app.core.auth import auth_backend
 from app.schemas import UserCreate, UserRead
-from app.users import auth_backend, fastapi_users
 
 jwt_router = fastapi_users.get_auth_router(auth_backend)
 

@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 
+from app.api.routers import auth, posts
+from app.api.routers import users as users_router
 from app.lifespan import lifespan
-from app.routers import auth, posts, users as users_router
 
 app = FastAPI(lifespan=lifespan)
 

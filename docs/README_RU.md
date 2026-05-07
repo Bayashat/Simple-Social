@@ -29,9 +29,13 @@
 
 ## 📷 Скриншоты
 
-| Загрузка (выбор хранилища) | Лента |
-|:--:|:--:|
-| ![Upload page](./images/upload_page.png) | ![Feed page](./images/feed_page.png) |
+### Страница загрузки (выбор хранилища)
+
+![Загрузка — выбор ImageKit или AWS S3](./images/upload_page.png)
+
+### Лента (публикации и подпись Storage)
+
+![Лента — посты с метками ImageKit / AWS S3](./images/feed_page.png)
 
 ## ⚙️ Настройка
 

@@ -1,41 +1,42 @@
-import uuid
+"""Legacy SQLite: posts.user_id stored as CHAR(32); align to GUID CHAR(36) like user.id.
 
-from sqlalchemy import insert, inspect, text
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase
+Revision ID: b7e2a1d0c9f8
+Revises: 9c3a24411c62
+Create Date: 2026-05-08
 
-DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+"""
+
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, cast
+
+import sqlalchemy as sa
+from alembic import op
+from sqlalchemy import insert, text
+
+if TYPE_CHECKING:
+    from sqlalchemy.schema import Table
 
 
-class Base(DeclarativeBase):
-    """Declarative base for ORM models."""
-
-
-engine = create_async_engine(DATABASE_URL)
-async_session_maker = async_sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
+revision: str = "b7e2a1d0c9f8"
+down_revision: str | Sequence[str] | None = "9c3a24411c62"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def _canonical_uuid_text(value: object) -> str:
+    import uuid
+
     if isinstance(value, uuid.UUID):
         return str(value)
     return str(uuid.UUID(str(value)))
 
 
-def _migrate_sqlite_post_guid_columns(connection: Connection) -> None:
-    """
-    Older SQLite DDL used SQLAlchemy ``Uuid`` (CHAR(32) hex).
-    FastAPI Users stores ``user.id`` as ``GUID`` (CHAR(36) with hyphens).
-    Same logical UUID compares unequal as text — rebuild ``posts`` with aligned types.
-    """
+def upgrade() -> None:
+    connection = op.get_bind()
     if connection.dialect.name != "sqlite":
         return
 
-    inspector = inspect(connection)
+    inspector = sa.inspect(connection)
     if not inspector.has_table("posts"):
         return
 
@@ -44,23 +45,22 @@ def _migrate_sqlite_post_guid_columns(connection: Connection) -> None:
     if user_row is None:
         return
     col_type = (user_row[2] or "").upper().replace(" ", "")
-    # Current model uses GUID / CHAR(36); legacy was CHAR(32) from ``Uuid``.
     if col_type != "CHAR(32)":
         return
 
-    # Import models so ``Post.__table__`` reflects GUID columns matching ``user``.
-    from app.models.posts import Post  # noqa: PLC0415
+    from app.models.posts import Post
 
     rows = [dict(row) for row in connection.execute(text("SELECT * FROM posts")).mappings()]
 
     connection.execute(text("PRAGMA foreign_keys=OFF"))
     connection.execute(text('DROP TABLE "posts"'))
 
-    Post.__table__.create(bind=connection, checkfirst=True)
+    post_table = cast("Table", Post.__table__)
+    post_table.create(bind=connection, checkfirst=True)
 
     for row in rows:
         connection.execute(
-            insert(Post.__table__).values(
+            insert(post_table).values(
                 id=_canonical_uuid_text(row["id"]),
                 user_id=_canonical_uuid_text(row["user_id"]),
                 caption=row["caption"],
@@ -78,8 +78,5 @@ def _migrate_sqlite_post_guid_columns(connection: Connection) -> None:
     connection.execute(text("PRAGMA foreign_keys=ON"))
 
 
-async def create_db_and_tables() -> None:
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        await conn.run_sync(_migrate_sqlite_post_guid_columns)
+def downgrade() -> None:
+    """No-op: UUID column widening cannot be safely reversed."""
