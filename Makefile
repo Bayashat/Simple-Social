@@ -3,11 +3,13 @@
 
 UV := uv run
 
-.PHONY: help run run-api run-fe dev format lint lint-ruff lint-mypy migrate upgrade install pre-commit
+.PHONY: help run run-api run-fe dev db dev-postgres format lint lint-ruff lint-mypy migrate upgrade install pre-commit
 
 help:
 	@echo "Targets:"
 	@echo "  make run / run-api - Uvicorn :8000 (Alembic on startup)"
+	@echo "  make db            - Postgres via docker compose (service: db)"
+	@echo "  make dev-postgres  - db + local API (uses POSTGRES_* or DATABASE_URL from .env)"
 	@echo "  make run-fe        - Streamlit UI :8501"
 	@echo "  make dev           - API + Streamlit (:8000 + :8501); Ctrl+C stops both"
 	@echo "  make format           - Ruff formatter"
@@ -20,6 +22,12 @@ help:
 run: run-api
 
 run-api:
+	$(UV) uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+db:
+	docker compose up -d db
+
+dev-postgres: db
 	$(UV) uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 run-fe:

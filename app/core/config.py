@@ -1,11 +1,21 @@
 from functools import lru_cache
+from typing import Self
+from urllib.parse import quote_plus
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Application settings loaded from environment and optional ``.env`` file."""
+    """Application settings loaded from environment and optional ``.env`` file.
+
+    Database connectivity uses **one of**:
+
+    - ``DATABASE_URL``: full async URL (e.g. SQLite ``sqlite+aiosqlite:///...`` or Postgres
+      ``postgresql+asyncpg://...``), or
+    - ``POSTGRES_USER`` + ``POSTGRES_PASSWORD`` plus optional ``POSTGRES_HOST``,
+      ``POSTGRES_PORT``, ``POSTGRES_DB`` (no credentials in repo; set these in ``.env``).
+    """
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -15,7 +25,15 @@ class Settings(BaseSettings):
 
     secret_key: str
 
-    database_url: str = "sqlite+aiosqlite:///./test.db"
+    db_url_raw: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DATABASE_URL"),
+    )
+    postgres_user: str | None = None
+    postgres_password: str | None = None
+    postgres_host: str = Field(default="localhost")
+    postgres_port: int = Field(default=5433)
+    postgres_db: str = Field(default="social_blog")
 
     jwt_lifetime_seconds: int = 3600
 
@@ -46,6 +64,37 @@ class Settings(BaseSettings):
     @property
     def imagekit_public_url_base(self) -> str | None:
         return self.imagekit_url_endpoint or self.imagekit_url
+
+    @model_validator(mode="after")
+    def validate_database_config(self) -> Self:
+        has_direct = self.db_url_raw is not None and self.db_url_raw.strip() != ""
+        has_pg = (
+            self.postgres_user is not None
+            and self.postgres_password is not None
+            and self.postgres_user.strip() != ""
+            and self.postgres_password != ""
+        )
+        if not has_direct and not has_pg:
+            msg = (
+                "Database configuration missing: set DATABASE_URL, or set POSTGRES_USER and "
+                "POSTGRES_PASSWORD (and optionally POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB)."
+            )
+            raise ValueError(msg)
+        return self
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def database_url(self) -> str:
+        if self.db_url_raw is not None and self.db_url_raw.strip() != "":
+            return self.db_url_raw.strip()
+        assert self.postgres_user is not None
+        assert self.postgres_password is not None
+        user_q = quote_plus(self.postgres_user)
+        password_q = quote_plus(self.postgres_password)
+        return (
+            f"postgresql+asyncpg://{user_q}:{password_q}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
 
 
 @lru_cache

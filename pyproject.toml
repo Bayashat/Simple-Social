@@ -5,12 +5,13 @@ description = "A FastAPI based blog application"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "aiosqlite>=0.22.1",
     "alembic>=1.18.4",
+    "asyncpg>=0.31.0",
     "boto3>=1.43.5",
     "fastapi>=0.136.1",
     "fastapi-users[sqlalchemy]>=15.0.5",
     "imagekitio>=5.4.0",
+    "psycopg2-binary>=2.9.12",
     "pydantic-settings>=2.14.0",
     "python-dotenv>=1.2.2",
     "streamlit>=1.57.0",
@@ -29,30 +30,26 @@ dev = [
 [tool.uv]
 default-groups = ["dev"]
 
+# =======================================================
+# Ruff: Fast code checking and formatting
+# =======================================================
 [tool.ruff]
 target-version = "py313"
-src = ["app", "main.py", "frontend", "alembic"]
 line-length = 100
 
 [tool.ruff.lint]
 select = [
-    "E", "W", "F", "I", "B", "C4", "UP", "SIM", "TCH", "PTH",
-    "RUF",
+    "E", "W", "F", "I", "B", "C4", "UP", "SIM", "TCH", "PTH", "RUF",
 ]
 # B008: FastAPI idiomatically uses Depends()/File()/Form() in defaults.
 ignore = ["B008"]
 
-[tool.ruff.lint.per-file-ignores]
-# Streamlit: nested `if` around widgets is intentional (rerun / layout).
-"frontend/**" = ["SIM102"]
-
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
 
-[tool.ruff.format]
-quote-style = "double"
-docstring-code-format = true
-
+# =======================================================
+# Mypy: Strict static type inference
+# =======================================================
 [tool.mypy]
 python_version = "3.13"
 strict = true
@@ -60,40 +57,8 @@ warn_unreachable = true
 show_error_codes = true
 pretty = true
 plugins = ["pydantic.mypy"]
-explicit_package_bases = true
-# Single discovery mode: mypy rejects combining ``packages`` with ``files``.
-files = ["app", "main.py", "frontend/app.py"]
 
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true
 warn_required_dynamic_aliases = true
-
-[[tool.mypy.overrides]]
-module = "app.core.config"
-disable_error_code = ["pydantic-alias"]
-
-[[tool.mypy.overrides]]
-module = [
-    "boto3.*",
-    "botocore.*",
-    "imagekitio",
-    "imagekitio.*",
-    "dotenv",
-    "fastapi_users.*",
-    "fastapi_users_db_sqlalchemy.*",
-    "fastapi_users_db_sqlalchemy.generics",
-    "sqlalchemy.*",
-    "streamlit",
-    "streamlit.*",
-    "uvicorn",
-]
-ignore_missing_imports = true
-
-# Streamlit UI: keep linting without full strict (session state / widgets are poorly typed).
-[[tool.mypy.overrides]]
-module = "frontend.*"
-strict = false
-disallow_untyped_defs = false
-disallow_any_generics = false
-disallow_untyped_calls = false
