@@ -1,9 +1,10 @@
 import os
 import uuid
+from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import Depends, Request
-from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin, models
+from fastapi import Depends
+from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
 from fastapi_users.authentication import (
     AuthenticationBackend,
     BearerTransport,
@@ -14,7 +15,10 @@ from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 from app.dependencies import get_user_db
 from app.models.users import User
 
-SECRET = os.getenv("SECRET_KEY")
+_secret_raw = os.getenv("SECRET_KEY")
+if _secret_raw is None:
+    raise RuntimeError("SECRET_KEY environment variable is required")
+SECRET: str = _secret_raw
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
@@ -22,15 +26,17 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     verification_token_secret = SECRET
 
 
-async def get_user_manager(user_db: SQLAlchemyUserDatabase = Depends(get_user_db)):
+async def get_user_manager(
+    user_db: SQLAlchemyUserDatabase[User, uuid.UUID] = Depends(get_user_db),
+) -> AsyncGenerator[UserManager]:
     yield UserManager(user_db)
 
 
 bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
 
 
-def get_jwt_strategy() -> JWTStrategy:
-    return JWTStrategy(secret=SECRET, lifetime_seconds=3600)  # how long the token is valid for
+def get_jwt_strategy() -> JWTStrategy[User, uuid.UUID]:
+    return JWTStrategy[User, uuid.UUID](secret=SECRET, lifetime_seconds=3600)
 
 
 auth_backend = AuthenticationBackend(

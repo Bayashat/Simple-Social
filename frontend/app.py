@@ -1,15 +1,18 @@
-import streamlit as st
-import requests
 import base64
 import urllib.parse
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
+
+import requests
+import streamlit as st
 
 st.set_page_config(page_title="Simple Social", layout="wide")
 
-# Backend classifies uploads by MIME: image/* → image, video/* → video, everything else → file (PDF, ZIP, …).
+# Backend classifies uploads by MIME: image/* → image, video/* → video,
+# everything else → file (PDF, ZIP, …).
 _UPLOAD_HELP = (
     "**Supported files** (matches API): "
-    "**images** (`image/*`), **videos** (`video/*`), and **any other MIME** treated as generic file "
+    "**images** (`image/*`), **videos** (`video/*`), "
+    "and **any other MIME** treated as generic file "
     "(e.g. PDF, GIF, ZIP). No extension whitelist on the server."
 )
 
@@ -31,7 +34,7 @@ def format_created_display_utc_plus_5(iso_str: str) -> str:
     except ValueError:
         return iso_str[:19] if len(iso_str) >= 19 else iso_str
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt.astimezone(utc_plus_5).strftime("%Y-%m-%d %H:%M:%S UTC+5")
 
 
@@ -65,7 +68,9 @@ def login_page():
                     token_data = response.json()
                     st.session_state.token = token_data["access_token"]
 
-                    user_response = requests.get("http://localhost:8000/users/me", headers=get_headers())
+                    user_response = requests.get(
+                        "http://localhost:8000/users/me", headers=get_headers()
+                    )
                     if user_response.status_code == 200:
                         st.session_state.user = user_response.json()
                         st.rerun()
@@ -94,7 +99,10 @@ def upload_page():
     uploaded_file = st.file_uploader(
         "Choose a file",
         type=None,
-        help="Browse any file types your browser allows. The backend classifies images, videos, and other files.",
+        help=(
+            "Browse any file types your browser allows. "
+            "The backend classifies images, videos, and other files."
+        ),
     )
     st.caption(_UPLOAD_HELP)
 
@@ -197,7 +205,9 @@ def feed_page():
                             st.rerun()
                         else:
                             try:
-                                detail = del_resp.json().get("detail", del_resp.text or "Unknown error")
+                                detail = del_resp.json().get(
+                                    "detail", del_resp.text or "Unknown error"
+                                )
                             except requests.exceptions.JSONDecodeError:
                                 detail = del_resp.text or "Unknown error"
                             st.session_state.post_delete_failed_message = str(detail)
@@ -208,20 +218,27 @@ def feed_page():
             ft = post["file_type"]
 
             if ft == "image":
-                img_url = create_transformed_url(post["url"], "", caption) if use_transforms else post["url"]
+                img_url = (
+                    create_transformed_url(post["url"], "", caption)
+                    if use_transforms
+                    else post["url"]
+                )
                 st.image(img_url, width=300)
                 if not use_transforms and caption:
                     st.caption(caption)
             elif ft == "video":
                 if use_transforms:
-                    uniform_video_url = create_transformed_url(post["url"], "w-400,h-200,cm-pad_resize,bg-blurred")
+                    uniform_video_url = create_transformed_url(
+                        post["url"], "w-400,h-200,cm-pad_resize,bg-blurred"
+                    )
                     st.video(uniform_video_url, width=300)
                 else:
                     st.video(post["url"], width=300)
                 if caption:
                     st.caption(caption)
             else:
-                st.markdown(f"[⬇ Download / open attachment]({post['url']}) — `{post.get('file_name', 'file')}`")
+                fname = post.get("file_name", "file")
+                st.markdown(f"[⬇ Download / open attachment]({post['url']}) — `{fname}`")
                 if caption:
                     st.caption(caption)
 

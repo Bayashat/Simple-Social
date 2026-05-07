@@ -29,9 +29,13 @@ A lightweight social-style app: **FastAPI** REST API plus a **Streamlit** web UI
 
 ## 📷 Screenshots
 
-| Upload (storage picker) | Feed (posts + storage labels) |
-|:--:|:--:|
-| ![Upload page](docs/images/upload_page.png) | ![Feed page](docs/images/feed_page.png) |
+### Upload (storage picker)
+
+![Upload page — Streamlit Share form with ImageKit / S3 choice](docs/images/upload_page.png)
+
+### Feed (posts and storage labels)
+
+![Feed — Streamlit feed with Storage labels](docs/images/feed_page.png)
 
 ## ⚙️ Setup
 

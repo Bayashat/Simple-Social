@@ -38,12 +38,11 @@ async def delete_post_remote_files(post: Post) -> None:
     if post.storage == PostStorage.IMAGEKIT:
         if post.imagekit_file_id:
             await imagekit_delete_file(post.imagekit_file_id)
-    elif post.storage == PostStorage.S3:
-        if post.s3_bucket and post.s3_object_key:
-            try:
-                await s3_delete_object(bucket=post.s3_bucket, object_key=post.s3_object_key)
-            except ClientError as exc:
-                raise HTTPException(
-                    status_code=502,
-                    detail="Failed to delete object from S3",
-                ) from exc
+    elif post.storage == PostStorage.S3 and post.s3_bucket and post.s3_object_key:
+        try:
+            await s3_delete_object(bucket=post.s3_bucket, object_key=post.s3_object_key)
+        except ClientError as exc:
+            raise HTTPException(
+                status_code=502,
+                detail="Failed to delete object from S3",
+            ) from exc

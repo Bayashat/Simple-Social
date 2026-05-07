@@ -2,8 +2,8 @@
 
 Objects created with PutObject are **private by default**. To open the returned HTTPS URL in a
 browser without signing in you must grant anonymous ``s3:GetObject`` — typically with a **bucket
-policy** (recommended) or optionally ``ACL=public-read`` on each object **only if** your bucket still
-allows ACLs (often disabled).
+policy** (recommended) or optionally ``ACL=public-read`` on each object **only if** your bucket
+still allows ACLs (often disabled).
 
 See AWS: https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteAccessPermissionsReqd.html
 """
@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+from typing import Any
 from urllib.parse import quote
 
 import boto3
@@ -25,8 +26,8 @@ _raw_prefix = (os.environ.get("S3_KEY_PREFIX") or "posts").strip().strip("/")
 s3_key_prefix = f"{_raw_prefix}/"
 
 
-def _client() -> boto3.client:
-    kwargs: dict[str, str] = {"region_name": s3_region}
+def _client() -> Any:
+    kwargs: dict[str, Any] = {"region_name": s3_region}
     ep = os.environ.get("AWS_ENDPOINT_URL") or os.environ.get("S3_ENDPOINT_URL")
     if ep:
         kwargs["endpoint_url"] = ep

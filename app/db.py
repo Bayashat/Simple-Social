@@ -1,9 +1,13 @@
 import uuid
+from typing import TYPE_CHECKING, cast
 
 from sqlalchemy import insert, inspect, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+
+if TYPE_CHECKING:
+    from sqlalchemy.schema import Table
 
 DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
@@ -49,18 +53,19 @@ def _migrate_sqlite_post_guid_columns(connection: Connection) -> None:
         return
 
     # Import models so ``Post.__table__`` reflects GUID columns matching ``user``.
-    from app.models.posts import Post  # noqa: PLC0415
+    from app.models.posts import Post
 
     rows = [dict(row) for row in connection.execute(text("SELECT * FROM posts")).mappings()]
 
     connection.execute(text("PRAGMA foreign_keys=OFF"))
     connection.execute(text('DROP TABLE "posts"'))
 
-    Post.__table__.create(bind=connection, checkfirst=True)
+    post_table = cast("Table", Post.__table__)
+    post_table.create(bind=connection, checkfirst=True)
 
     for row in rows:
         connection.execute(
-            insert(Post.__table__).values(
+            insert(post_table).values(
                 id=_canonical_uuid_text(row["id"]),
                 user_id=_canonical_uuid_text(row["user_id"]),
                 caption=row["caption"],
@@ -79,7 +84,6 @@ def _migrate_sqlite_post_guid_columns(connection: Connection) -> None:
 
 
 async def create_db_and_tables() -> None:
-
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_sqlite_post_guid_columns)
