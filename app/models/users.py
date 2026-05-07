@@ -1,23 +1,8 @@
-import uuid
-from datetime import datetime
-from enum import StrEnum
-from typing import Annotated, Self
+from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTableUUID
+from sqlalchemy.orm import relationship
 
-from sqlalchemy import DateTime
-from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import String, Uuid
-from sqlalchemy.orm import Mapped, mapped_column
-
-from app.db import Base, utc_now
-
-RequiredStr = Annotated[str, mapped_column(String, nullable=False)]
+from app.db import Base
 
 
-class Post(Base):
-    __tablename__ = "posts"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        Uuid,
-        primary_key=True,
-        default=uuid.uuid4,
-    )
+class User(SQLAlchemyBaseUserTableUUID, Base):
+    posts = relationship("Post", back_populates="user")

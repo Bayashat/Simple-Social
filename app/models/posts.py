@@ -1,13 +1,16 @@
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Annotated, Self
 
-from sqlalchemy import DateTime, Enum as SQLEnum, String, Uuid
-from sqlalchemy.orm import Mapped, mapped_column
+from fastapi_users_db_sqlalchemy.generics import GUID
+from sqlalchemy import DateTime
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db import Base, utc_now
+from app.db import Base
 
 RequiredStr = Annotated[str, mapped_column(String, nullable=False)]
 
@@ -47,7 +50,8 @@ def safe_upload_basename(filename: str) -> str:
 class Post(Base):
     __tablename__ = "posts"
 
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("user.id"))
     caption: Mapped[str | None] = mapped_column(String(50))
     storage: Mapped[PostStorage] = mapped_column(
         SQLEnum(PostStorage, native_enum=False, length=16),
@@ -65,4 +69,9 @@ class Post(Base):
         SQLEnum(PostFileType, native_enum=False, length=16),
     )
     file_name: Mapped[RequiredStr]
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    user = relationship("User", back_populates="posts")

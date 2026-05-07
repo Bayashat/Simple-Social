@@ -1,0 +1,4 @@
+# Used when launching Streamlit with cwd inside `frontend/`, or set STREAMLIT_CONFIG_DIR.
+[server]
+# Streamlit UI copy references this value; align with infra if you tighten limits.
+maxUploadSize = 200
