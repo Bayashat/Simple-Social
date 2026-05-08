@@ -194,24 +194,23 @@ def feed_page():
             with col1:
                 st.markdown(f"**{post['email']}** • `{ts}` • **Storage:** {where}")
             with col2:
-                if post.get("is_owner", False):
-                    if st.button("🗑️", key=f"delete_{post['id']}", help="Delete post"):
-                        del_resp = requests.delete(
-                            f"http://localhost:8000/posts/{post['id']}",
-                            headers=get_headers(),
-                        )
-                        if del_resp.status_code == 200:
-                            st.session_state.post_deleted_flash = True
-                            st.rerun()
-                        else:
-                            try:
-                                detail = del_resp.json().get(
-                                    "detail", del_resp.text or "Unknown error"
-                                )
-                            except requests.exceptions.JSONDecodeError:
-                                detail = del_resp.text or "Unknown error"
-                            st.session_state.post_delete_failed_message = str(detail)
-                            st.rerun()
+                if post.get("is_owner", False) and st.button(
+                    "🗑️", key=f"delete_{post['id']}", help="Delete post"
+                ):
+                    del_resp = requests.delete(
+                        f"http://localhost:8000/posts/{post['id']}",
+                        headers=get_headers(),
+                    )
+                    if del_resp.status_code == 200:
+                        st.session_state.post_deleted_flash = True
+                        st.rerun()
+                    else:
+                        try:
+                            detail = del_resp.json().get("detail", del_resp.text or "Unknown error")
+                        except requests.exceptions.JSONDecodeError:
+                            detail = del_resp.text or "Unknown error"
+                        st.session_state.post_delete_failed_message = str(detail)
+                        st.rerun()
 
             caption = post.get("caption", "")
             use_transforms = post.get("storage") == "imagekit"

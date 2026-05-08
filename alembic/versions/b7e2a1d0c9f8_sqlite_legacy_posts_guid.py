@@ -10,8 +10,9 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy import insert, text
+
+from alembic import op
 
 if TYPE_CHECKING:
     from sqlalchemy.schema import Table
