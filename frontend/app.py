@@ -1,4 +1,5 @@
 import base64
+import os
 import urllib.parse
 from datetime import UTC, datetime, timedelta, timezone
 
@@ -6,6 +7,7 @@ import requests
 import streamlit as st
 
 st.set_page_config(page_title="Simple Social", layout="wide")
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 # Backend classifies uploads by MIME: image/* → image, video/* → video,
 # everything else → file (PDF, ZIP, …).
@@ -62,15 +64,13 @@ def login_page():
         with col1:
             if st.button("Login", type="primary", use_container_width=True):
                 login_data = {"username": email, "password": password}
-                response = requests.post("http://localhost:8000/auth/jwt/login", data=login_data)
+                response = requests.post(f"{API_URL}/auth/jwt/login", data=login_data)
 
                 if response.status_code == 200:
                     token_data = response.json()
                     st.session_state.token = token_data["access_token"]
 
-                    user_response = requests.get(
-                        "http://localhost:8000/users/me", headers=get_headers()
-                    )
+                    user_response = requests.get(f"{API_URL}/users/me", headers=get_headers())
                     if user_response.status_code == 200:
                         st.session_state.user = user_response.json()
                         st.rerun()
@@ -82,7 +82,7 @@ def login_page():
         with col2:
             if st.button("Sign Up", type="secondary", use_container_width=True):
                 signup_data = {"email": email, "password": password}
-                response = requests.post("http://localhost:8000/auth/register", json=signup_data)
+                response = requests.post(f"{API_URL}/auth/register", json=signup_data)
 
                 if response.status_code == 201:
                     st.toast("Account created — you can log in now.", icon="✅")
@@ -125,7 +125,7 @@ def upload_page():
             files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
             data = {"caption": caption, "storage": storage}
             response = requests.post(
-                "http://localhost:8000/upload",
+                f"{API_URL}/upload",
                 files=files,
                 data=data,
                 headers=get_headers(),
@@ -177,7 +177,7 @@ def feed_page():
     if msg := st.session_state.pop("post_delete_failed_message", None):
         st.toast(f"Delete failed: {msg}", icon="❌")
 
-    response = requests.get("http://localhost:8000/posts", headers=get_headers())
+    response = requests.get(f"{API_URL}/posts", headers=get_headers())
     if response.status_code == 200:
         posts = response.json()["posts"]
 
@@ -198,7 +198,7 @@ def feed_page():
                     "🗑️", key=f"delete_{post['id']}", help="Delete post"
                 ):
                     del_resp = requests.delete(
-                        f"http://localhost:8000/posts/{post['id']}",
+                        f"{API_URL}/posts/{post['id']}",
                         headers=get_headers(),
                     )
                     if del_resp.status_code == 200:
