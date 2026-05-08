@@ -61,4 +61,5 @@ plugins = ["pydantic.mypy"]
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true
-warn_required_dynamic_aliases = true
+# Settings use AliasChoices for multiple env names; static aliases are not expressible.
+warn_required_dynamic_aliases = false

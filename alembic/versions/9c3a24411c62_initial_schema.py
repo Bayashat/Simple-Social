@@ -9,8 +9,9 @@ Create Date: 2026-05-08 03:27:39.477359
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
 from fastapi_users_db_sqlalchemy.generics import GUID
+
+from alembic import op
 
 revision: str = "9c3a24411c62"
 down_revision: str | Sequence[str] | None = None

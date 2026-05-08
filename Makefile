@@ -30,7 +30,7 @@ format:
 
 lint:
 	$(UV) ruff check .
-	$(UV) mypy
+	$(UV) mypy --explicit-package-bases app alembic
 
 # Usage: make migrate MSG="add users table"
 MSG ?= auto
