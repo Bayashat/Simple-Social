@@ -86,7 +86,13 @@ class Settings(BaseSettings):
     @property
     def database_url(self) -> str:
         if self.db_url_raw is not None and self.db_url_raw.strip() != "":
-            return self.db_url_raw.strip()
+            url = self.db_url_raw.strip()
+            if url.startswith("postgres://"):
+                return url.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif url.startswith("postgresql://"):
+                return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            return url
+
         assert self.postgres_user is not None
         assert self.postgres_password is not None
         user_q = quote_plus(self.postgres_user)
