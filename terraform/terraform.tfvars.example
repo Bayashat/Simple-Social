@@ -1,0 +1,24 @@
+# Copy to terraform.tfvars (gitignored). Never commit secrets.
+
+supabase_organization_id = "your-org-slug-from-dashboard"
+supabase_project_name    = "simple-social"
+supabase_region          = "ap-southeast-1"
+
+create_supabase_project = true
+
+# When create_supabase_project = false, paste Session pooler URL converted to asyncpg, e.g.:
+# database_url = "postgresql+asyncpg://postgres.xxxxx:PASSWORD@aws-0-....pooler.supabase.com:5432/postgres?sslmode=require"
+
+render_service_name  = "Simple Social"
+render_plan          = "free"
+render_region        = "frankfurt"
+container_image_url  = "ghcr.io/bayashat/simple-social"
+container_image_tag  = "latest"
+
+# Optional — only if the GHCR package is private
+# ghcr_username = "bayashat"
+# ghcr_token      = "ghp_xxxxxxxx"
+
+# Optional — production uploads without S3 (ImageKit-only path)
+# imagekit_private_key  = ""
+# imagekit_url_endpoint = "https://ik.imagekit.io/your-id"
